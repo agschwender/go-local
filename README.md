@@ -38,6 +38,16 @@ Once the application is running, it will be available on the specified port, `80
 $ curl http://localhost:8080/ping
 ```
 
+### Building
+
+To compile changes made to the application, run
+
+```
+$ make build
+```
+
+This will recompile the executable with your changes and restart the application.
+
 ### Dependencies
 
 Dependency management is done via [modules](https://go.dev/blog/using-go-modules). To introduce a new dependency, import it in your code like a regular dependency. Then
