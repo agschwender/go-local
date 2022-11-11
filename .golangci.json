@@ -1,0 +1,41 @@
+{
+    "run": {
+        "deadline": "120s",
+        "tests": false
+    },
+    "linters": {
+        "enable": [
+            "deadcode",
+            "errcheck",
+            "exportloopref",
+            "ineffassign",
+            "gci",
+            "gofmt",
+            "goimports",
+            "govet",
+            "prealloc",
+            "staticcheck",
+            "structcheck",
+            "typecheck",
+            "unparam",
+            "unused",
+            "varcheck",
+            "whitespace"
+        ],
+        "enable-all": false,
+        "fast": true
+    },
+    "linters-settings": {
+        "gci": {
+            "local-prefixes": "github.com/agschwender/go-local"
+        },
+        "govet": {
+            "check-shadowing": true
+        }
+    },
+    "issues": {
+        "exclude": [
+            "^shadow: declaration of \"err\" shadows declaration at"
+        ]
+    }
+}

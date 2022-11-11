@@ -1,0 +1,40 @@
+version: "3.4"
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    command: /go/bin/example
+    depends_on:
+      - db
+      - redis
+    environment:
+      - APP_PORT
+      - DB_URL=postgres://${POSTGRES_USER:-example}:${POSTGRES_PASSWORD:-example}@db/${POSTGRES_DB:-example}?sslmode=disable
+      - REDIS_URL=redis://redis
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - ".:/go/src/github.com/agschwender/go-local"
+
+  db:
+    image: postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-example}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-example}
+      - POSTGRES_DB=${POSTGRES_DB:-example}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+
+  lint:
+    image: golangci/golangci-lint:v1.37.0-alpine
+    command: golangci-lint run
+    volumes:
+      - ".:/app"
+    working_dir: /app
+
+  redis:
+    image: redis:6.2-alpine
+
+volumes:
+  pg-data: {}
