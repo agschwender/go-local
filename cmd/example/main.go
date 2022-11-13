@@ -1,8 +1,8 @@
 // Package main defines the example application.
 //
-// This file is in no way intended be representative of standard golang
-// practices. It is provided merely to run an application that uses all
-// the infrastructure defined in the docker configurations to
+// This file is in no way intended to be representative of standard
+// golang practices. It is provided merely to run an application that
+// uses all the infrastructure defined in the docker configurations to
 // demonstrate that everything has been setup and configured properly.
 package main
 
