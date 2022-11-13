@@ -112,7 +112,7 @@ func incr(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request
 			defer cacheConn.Close()
 			_, err = redis.DoContext(cacheConn, ctx, "SET", cacheKey, value)
 			if err != nil {
-				log.Printf("Unable to get cache value: %v", err)
+				log.Printf("Unable to set cache value: %v", err)
 			}
 		}
 
@@ -149,7 +149,7 @@ func view(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request
 			defer cacheConn.Close()
 			value, err = redis.Int(redis.DoContext(cacheConn, ctx, "GET", cacheKey))
 			if err != nil {
-				if err != redis.ErrNil {
+				if err == redis.ErrNil {
 					// Ignore not found error
 					err = nil
 				} else {
