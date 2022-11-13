@@ -10,6 +10,7 @@ services:
       - redis
     environment:
       - APP_PORT
+      - AUTORELOAD=${AUTORELOAD:-true}
       - DB_URL=postgres://${POSTGRES_USER:-example}:${POSTGRES_PASSWORD:-example}@db/${POSTGRES_DB:-example}?sslmode=disable
       - REDIS_URL=redis://redis
     ports:

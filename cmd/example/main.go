@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -217,14 +218,17 @@ func main() {
 		Addr: ":8080",
 	}
 
-	autoReloader := autoreload.New(
-		autoreload.WithMaxAttempts(6),
-		autoreload.WithOnReload(func() {
-			shutdown(server)
-		}),
-	)
+	shouldAutoReload, _ := strconv.ParseBool(os.Getenv("AUTORELOAD")) // nolint: errcheck
+	if shouldAutoReload {
+		autoReloader := autoreload.New(
+			autoreload.WithMaxAttempts(6),
+			autoreload.WithOnReload(func() {
+				shutdown(server)
+			}),
+		)
 
-	autoReloader.Start()
+		autoReloader.Start()
+	}
 
 	go func() {
 		log.Printf("Starting server")
