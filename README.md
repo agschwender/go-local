@@ -10,6 +10,7 @@ Developing the application assumes you have [Docker](https://www.docker.com/) wi
 Managing the environment is done using dotenv files. Since the containers are run through docker-compose, the `.env` file is automatically parsed and passed into the container. The following is the list of environment variables that are accepted by the application:
 
 * `APP_PORT`: the port to expose the app on, defaults to `8080`
+* `AUTORELOAD`: enables autoreload of the application when the executable changes, defaults to `true`
 * `DB_URL`: the url for connecting to the database, defaults to the db created by docker
 * `POSTGRES_DB`: the postgres database name, defaults to `example`
 * `POSTGRES_PASSWORD`: the postgres database password, defaults to `example`
@@ -46,7 +47,7 @@ To compile changes made to the application, run
 $ make build
 ```
 
-This will recompile the executable with your changes and restart the application.
+This will recompile the executable with your changes and restart the application if `AUTORELOAD` is enabled.
 
 ### Dependencies
 
