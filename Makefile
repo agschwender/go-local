@@ -14,6 +14,9 @@ build: running ## Rebuild the application
 build-dependencies: running ## Install new dependencies
 	@docker-compose exec app go mod tidy
 
+clean: ## Stop and delete all data
+	@docker-compose down --remove-orphans --volumes
+
 lint: ## Lint the application
 	@docker-compose run --rm lint
 	@echo "Lint completed with no errors"
