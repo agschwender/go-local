@@ -39,6 +39,12 @@ Once the application is running, it will be available on the specified port, `80
 $ curl http://localhost:8080/ping
 ```
 
+If running in the background, you can view the logs by
+
+```
+$ make logs
+```
+
 ### Building
 
 To compile changes made to the application, run
