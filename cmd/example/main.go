@@ -19,6 +19,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/eapache/go-resiliency/retrier"
 	"github.com/gomodule/redigo/redis"
 	"github.com/lib/pq"
 
@@ -27,12 +28,37 @@ import (
 
 const cacheKey string = "example:counter:value"
 
+func openDB(datasource string) (db *sql.DB, err error) {
+	log.Printf("Verifying database connection")
+
+	// Retry the connection to the database because if it is started at
+	// the same time as the application, the db container may not be
+	// accepting connections yet.
+	r := retrier.New(retrier.LimitedExponentialBackoff(8, time.Second, 10*time.Second), nil)
+	err = r.Run(func() error {
+		db, err = sql.Open("postgres", datasource)
+		if err != nil {
+			return err
+		}
+
+		err = db.Ping()
+		if err != nil {
+			db.Close() // nolint: errcheck
+			return err
+		}
+
+		return nil
+	})
+
+	return
+}
+
 func setupDB(datasource string) (*sql.DB, error) {
 	if datasource == "" {
 		return nil, errors.New("missing db url")
 	}
 
-	db, err := sql.Open("postgres", datasource)
+	db, err := openDB(datasource)
 	if err != nil {
 		return nil, err
 	}
@@ -188,6 +214,7 @@ func shutdown(server *http.Server) {
 	if err != nil {
 		log.Printf("Server shutdown error: %v", err)
 	}
+	log.Print("Shutting down application")
 }
 
 func writeError(w http.ResponseWriter, err error) {
@@ -198,6 +225,8 @@ func writeError(w http.ResponseWriter, err error) {
 }
 
 func main() {
+	log.Printf("Starting application")
+
 	db, err := setupDB(os.Getenv("DB_URL"))
 	if err != nil {
 		log.Fatalf("Failed to start DB: %v", err)
@@ -231,7 +260,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("Starting server")
+		log.Printf("Starting HTTP server")
 		if err := server.ListenAndServe(); err != http.ErrServerClosed {
 			log.Fatalf("HTTP server error: %v", err)
 		}
