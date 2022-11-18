@@ -19,11 +19,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/agschwender/autoreload"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/gomodule/redigo/redis"
 	"github.com/lib/pq"
-
-	"github.com/agschwender/go-local/pkg/autoreload"
 )
 
 const cacheKey string = "example:counter:value"

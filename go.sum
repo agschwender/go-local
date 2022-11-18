@@ -1,3 +1,5 @@
+github.com/agschwender/autoreload v1.0.1 h1:efmrYCjrlm0guQEi82XVKtI8+qMt3gc3F25FrS6NK0Q=
+github.com/agschwender/autoreload v1.0.1/go.mod h1:uJ60KnuJafloMQV4TvAHEEfH79tj9DXOa1suNX8KGFM=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/eapache/go-resiliency v1.3.0 h1:RRL0nge+cWGlxXbUzJ7yMcq6w2XBEr19dCN6HECGaT0=
