@@ -3,7 +3,7 @@ module github.com/agschwender/go-local
 go 1.19
 
 require (
-	github.com/agschwender/autoreload v1.0.1
+	github.com/agschwender/autoreload v1.1.2
 	github.com/eapache/go-resiliency v1.3.0
 	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gomodule/redigo v1.8.9
