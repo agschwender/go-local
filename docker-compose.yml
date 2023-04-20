@@ -12,11 +12,13 @@ services:
       - APP_PORT
       - AUTORELOAD=${AUTORELOAD:-true}
       - DB_URL=postgres://${POSTGRES_USER:-example}:${POSTGRES_PASSWORD:-example}@db/${POSTGRES_DB:-example}?sslmode=disable
+      - ERRCAT_URL
       - REDIS_URL=redis://redis
     ports:
       - "${APP_PORT:-8080}:8080"
     volumes:
       - ".:/go/src/github.com/agschwender/go-local"
+      - "~/.gitconfig:/root/.gitconfig"
 
   db:
     image: postgres

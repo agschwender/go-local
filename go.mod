@@ -10,4 +10,13 @@ require (
 	github.com/lib/pq v1.10.7
 )
 
-require golang.org/x/sys v0.0.0-20220908164124-27713097b956 // indirect
+require (
+	github.com/agschwender/errcat-go v0.0.0-20230417191546-98c19ceb1b7f // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
+	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
+	google.golang.org/grpc v1.54.0 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
+)
