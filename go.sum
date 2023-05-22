@@ -412,6 +412,8 @@ github.com/agschwender/errcat-go v0.0.0-20230417190648-c0199073d7d9 h1:yQA18bbbj
 github.com/agschwender/errcat-go v0.0.0-20230417190648-c0199073d7d9/go.mod h1:8Pa4dqLNM/kUwO/Q8vS/TYsFawlcYIymwWJb6eJIRvM=
 github.com/agschwender/errcat-go v0.0.0-20230417191546-98c19ceb1b7f h1:fAO5Mx1LcHW067fTU6XOX6U40mXmhgkDbr9DJsMpc+8=
 github.com/agschwender/errcat-go v0.0.0-20230417191546-98c19ceb1b7f/go.mod h1:8Pa4dqLNM/kUwO/Q8vS/TYsFawlcYIymwWJb6eJIRvM=
+github.com/agschwender/errcat-go v0.0.0-20230522174110-db3e8be106ab h1:aWnVuD88Z9KUN9m5VJuYI1sxockXn8P6hCvDmIxapRw=
+github.com/agschwender/errcat-go v0.0.0-20230522174110-db3e8be106ab/go.mod h1:8Pa4dqLNM/kUwO/Q8vS/TYsFawlcYIymwWJb6eJIRvM=
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/census-instrumentation/opencensus-proto v0.3.0/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=

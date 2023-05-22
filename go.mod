@@ -11,7 +11,7 @@ require (
 )
 
 require (
-	github.com/agschwender/errcat-go v0.0.0-20230417191546-98c19ceb1b7f // indirect
+	github.com/agschwender/errcat-go v0.0.0-20230522174110-db3e8be106ab // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
