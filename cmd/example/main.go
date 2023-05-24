@@ -148,7 +148,7 @@ func setupRedis(errcatD *errcat.Daemon, datasource string) (*redis.Pool, error) 
 	}, nil
 }
 
-func incr(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request) {
+func incr(db *sql.DB, cache *redis.Pool, errcatD *errcat.Daemon) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		log.Printf("Serving incr")
 
@@ -168,14 +168,21 @@ func incr(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request
 		}
 		defer tx.Rollback() // nolint: errcheck
 
-		_, err = tx.ExecContext(ctx, "UPDATE example SET value = value + 1 WHERE counter = 1")
+		key, _ := errcatD.RegisterCaller(errcat.New("postgres", "updateCounter"))
+		err = errcatD.Call(key, func() error {
+			_, err = tx.ExecContext(ctx, "UPDATE example SET value = value + 1 WHERE counter = 1")
+			return err
+		})
 		if err != nil {
 			return
 		}
 
-		query := "SELECT value FROM example WHERE counter = 1"
+		key, _ = errcatD.RegisterCaller(errcat.New("postgres", "getCounter"))
 		var value int
-		err = tx.QueryRowContext(ctx, query).Scan(&value)
+		err = errcatD.Call(key, func() error {
+			query := "SELECT value FROM example WHERE counter = 1"
+			return tx.QueryRowContext(ctx, query).Scan(&value)
+		})
 		if err != nil {
 			return
 		}
@@ -185,7 +192,11 @@ func incr(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request
 			log.Printf("Unable to connect to cache: %v", err)
 		} else {
 			defer cacheConn.Close()
-			_, err = redis.DoContext(cacheConn, ctx, "SET", cacheKey, value)
+			key, _ = errcatD.RegisterCaller(errcat.New("redis", "setCounter"))
+			err = errcatD.Call(key, func() error {
+				_, err = redis.DoContext(cacheConn, ctx, "SET", cacheKey, value)
+				return err
+			})
 			if err != nil {
 				log.Printf("Unable to set cache value: %v", err)
 			}
@@ -302,7 +313,7 @@ func main() {
 	defer cache.Close()
 
 	http.HandleFunc("/ping", ping)
-	http.HandleFunc("/incr", incr(db, cache))
+	http.HandleFunc("/incr", incr(db, cache, errcatD))
 	http.HandleFunc("/view", view(db, cache, errcatD))
 
 	server := &http.Server{
