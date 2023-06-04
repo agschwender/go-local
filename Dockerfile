@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine as dev
+FROM golang:1.20-alpine as dev
 
 # This is needed for some go mod commands
 RUN apk --no-cache add git
@@ -8,6 +8,12 @@ RUN apk --no-cache add make gcc libc-dev
 # Set the working directory according to the package name
 RUN mkdir -p /go/src/github.com/agschwender/go-local
 WORKDIR /go/src/github.com/agschwender/go-local
+
+
+ENV GOPRIVATE=github.com/agschwender/errcat-go
+
+# Copy credentials
+COPY .netrc /root/.netrc
 
 # Copy dependency configuration and download. This will allow caching
 # of these steps unless the configuration is changed.

@@ -13,6 +13,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
@@ -20,6 +21,7 @@ import (
 	"time"
 
 	"github.com/agschwender/autoreload"
+	"github.com/agschwender/errcat-go"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/gomodule/redigo/redis"
 	"github.com/lib/pq"
@@ -52,12 +54,22 @@ func openDB(datasource string) (db *sql.DB, err error) {
 	return
 }
 
-func setupDB(datasource string) (*sql.DB, error) {
+func setupDB(errcatD *errcat.Daemon, datasource string) (*sql.DB, error) {
 	if datasource == "" {
 		return nil, errors.New("missing db url")
 	}
 
-	db, err := openDB(datasource)
+	log.Printf("setting up postgres")
+
+	key, _ := errcatD.RegisterCaller(errcat.New("postgres", "openDB"))
+
+	var db *sql.DB
+	var err error
+	err = errcatD.Call(key, func() error {
+		db, err = openDB(datasource)
+		return err
+	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -70,12 +82,20 @@ func setupDB(datasource string) (*sql.DB, error) {
 		"value INTEGER NOT NULL DEFAULT 0" +
 		")"
 
-	_, err = db.ExecContext(ctx, query)
+	key, _ = errcatD.RegisterCaller(errcat.New("postgres", "createTableExample"))
+	err = errcatD.Call(key, func() error {
+		_, err := db.ExecContext(ctx, query)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = db.ExecContext(ctx, "INSERT INTO example (counter, value) VALUES (1, 0)")
+	key, _ = errcatD.RegisterCaller(errcat.New("postgres", "insertCounterIntoExample"))
+	err = errcatD.Call(key, func() error {
+		_, err := db.ExecContext(ctx, "INSERT INTO example (counter, value) VALUES (1, 0)")
+		return err
+	})
 	if err != nil {
 		pqErr, ok := err.(*pq.Error)
 		if !ok || pqErr.Code != pq.ErrorCode("23505") {
@@ -86,19 +106,49 @@ func setupDB(datasource string) (*sql.DB, error) {
 	return db, nil
 }
 
-func setupRedis(datasource string) (*redis.Pool, error) {
+func setupErrcat(addr string) *errcat.Daemon {
+	if addr == "" {
+		log.Printf("errcat address is empty")
+		return nil
+	}
+
+	errcatAddr, err := url.Parse(addr)
+	if err != nil {
+		log.Printf("Invalid errcat URL: %s", addr)
+		return nil
+	}
+
+	log.Printf("errcat address = %s", errcatAddr.String())
+
+	return errcat.NewD(
+		errcat.WithEnvironment("local"),
+		errcat.WithServerAddr(*errcatAddr),
+		errcat.WithService("go-local"),
+	)
+}
+
+func setupRedis(errcatD *errcat.Daemon, datasource string) (*redis.Pool, error) {
 	if datasource == "" {
 		return nil, errors.New("missing redis url")
 	}
 
+	log.Printf("setting up redis")
+
+	key, _ := errcatD.RegisterCaller(errcat.New("redis", "dial"))
 	return &redis.Pool{
 		Dial: func() (redis.Conn, error) {
-			return redis.DialURL(datasource)
+			var conn redis.Conn
+			err := errcatD.Call(key, func() error {
+				var connErr error
+				conn, connErr = redis.DialURL(datasource)
+				return connErr
+			})
+			return conn, err
 		},
 	}, nil
 }
 
-func incr(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request) {
+func incr(db *sql.DB, cache *redis.Pool, errcatD *errcat.Daemon) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		log.Printf("Serving incr")
 
@@ -118,14 +168,21 @@ func incr(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request
 		}
 		defer tx.Rollback() // nolint: errcheck
 
-		_, err = tx.ExecContext(ctx, "UPDATE example SET value = value + 1 WHERE counter = 1")
+		key, _ := errcatD.RegisterCaller(errcat.New("postgres", "updateCounter"))
+		err = errcatD.Call(key, func() error {
+			_, err = tx.ExecContext(ctx, "UPDATE example SET value = value + 1 WHERE counter = 1")
+			return err
+		})
 		if err != nil {
 			return
 		}
 
-		query := "SELECT value FROM example WHERE counter = 1"
+		key, _ = errcatD.RegisterCaller(errcat.New("postgres", "getCounter"))
 		var value int
-		err = tx.QueryRowContext(ctx, query).Scan(&value)
+		err = errcatD.Call(key, func() error {
+			query := "SELECT value FROM example WHERE counter = 1"
+			return tx.QueryRowContext(ctx, query).Scan(&value)
+		})
 		if err != nil {
 			return
 		}
@@ -135,7 +192,11 @@ func incr(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request
 			log.Printf("Unable to connect to cache: %v", err)
 		} else {
 			defer cacheConn.Close()
-			_, err = redis.DoContext(cacheConn, ctx, "SET", cacheKey, value)
+			key, _ = errcatD.RegisterCaller(errcat.New("redis", "setCounter"))
+			err = errcatD.Call(key, func() error {
+				_, err = redis.DoContext(cacheConn, ctx, "SET", cacheKey, value)
+				return err
+			})
 			if err != nil {
 				log.Printf("Unable to set cache value: %v", err)
 			}
@@ -151,7 +212,7 @@ func incr(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request
 	}
 }
 
-func view(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request) {
+func view(db *sql.DB, cache *redis.Pool, errcatD *errcat.Daemon) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, req *http.Request) {
 		log.Printf("Serving view")
 
@@ -172,22 +233,31 @@ func view(db *sql.DB, cache *redis.Pool) func(http.ResponseWriter, *http.Request
 			log.Printf("Unable to connect to cache: %v", err)
 		} else {
 			defer cacheConn.Close()
-			value, err = redis.Int(redis.DoContext(cacheConn, ctx, "GET", cacheKey))
-			if err != nil {
-				if err == redis.ErrNil {
-					// Ignore not found error
-					err = nil
+
+			key, _ := errcatD.RegisterCaller(errcat.New("redis", "getCounter"))
+			err = errcatD.Call(key, func() error {
+				value, err = redis.Int(redis.DoContext(cacheConn, ctx, "GET", cacheKey))
+				if err != nil {
+					if err != redis.ErrNil {
+						// Ignore not found error
+						return err
+					}
 				} else {
-					log.Printf("Unable to get cache value: %v", err)
+					hasValue = true
 				}
-			} else {
-				hasValue = true
+				return nil
+			})
+			if err != nil {
+				log.Printf("Unable to get cache value: %v", err)
 			}
 		}
 
 		if !hasValue {
-			query := "SELECT value FROM example WHERE counter = 1"
-			err = db.QueryRowContext(ctx, query).Scan(&value)
+			key, _ := errcatD.RegisterCaller(errcat.New("postgres", "getCounter"))
+			err = errcatD.Call(key, func() error {
+				query := "SELECT value FROM example WHERE counter = 1"
+				return db.QueryRowContext(ctx, query).Scan(&value)
+			})
 			if err != nil {
 				return
 			}
@@ -226,21 +296,25 @@ func writeError(w http.ResponseWriter, err error) {
 func main() {
 	log.Printf("Starting application")
 
-	db, err := setupDB(os.Getenv("DB_URL"))
+	errcatD := setupErrcat(os.Getenv("ERRCAT_URL"))
+	errcatD.Start()
+	defer errcatD.Stop()
+
+	db, err := setupDB(errcatD, os.Getenv("DB_URL"))
 	if err != nil {
 		log.Fatalf("Failed to start DB: %v", err)
 	}
 	defer db.Close()
 
-	cache, err := setupRedis(os.Getenv("REDIS_URL"))
+	cache, err := setupRedis(errcatD, os.Getenv("REDIS_URL"))
 	if err != nil {
 		log.Fatalf("Failed to start redis client: %v", err)
 	}
 	defer cache.Close()
 
 	http.HandleFunc("/ping", ping)
-	http.HandleFunc("/incr", incr(db, cache))
-	http.HandleFunc("/view", view(db, cache))
+	http.HandleFunc("/incr", incr(db, cache, errcatD))
+	http.HandleFunc("/view", view(db, cache, errcatD))
 
 	server := &http.Server{
 		Addr: ":8080",
